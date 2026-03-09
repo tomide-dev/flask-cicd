@@ -1,0 +1,77 @@
+name: CI/CD Pipeline
+# ---------------------------------------------------------------
+# TRIGGERS
+# This section defines when the pipeline runs.
+# It will run on any push to the main branch,
+# and on any pull request targeting the main branch.
+# ---------------------------------------------------------------
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+# -------------------------------------------------------------
+# JOB 1: TEST
+# Runs on every push and every pull request.
+# Spins up a fresh Ubuntu machine, installs dependencies,
+# and runs the full pytest test suite.
+
+# If any test fails this job fails and deploy never runs.
+# -------------------------------------------------------------
+test:
+  name: Run Tests
+  runs-on: ubuntu-latest
+
+steps:
+    - name: Checkout code
+    uses: actions/checkout@v3
+
+    - name: Set up Python 3.10
+    uses: actions/setup-python@v4
+    with:
+      python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    - name: Run tests
+      run: pytest -v
+
+# -------------------------------------------------------------
+# JOB 2: DEPLOY
+# Only runs if two conditions are both true:
+# 1. The test job passed successfully
+# 2. The event was a direct push to main, not a pull request
+#
+# Connects to your EC2 server via SSH and runs four commands:
+# - Pulls the latest code from GitHub
+# - Reinstalls dependencies in case anything changed
+# - Restarts the app service to load the new code
+# - Prints the service status to confirm it is running
+# -------------------------------------------------------------
+deploy:
+  name: Deploy to EC2
+  runs-on: ubuntu-latest
+  needs: test
+  if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  steps:
+
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - name: Deploy to EC2 via SSH
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          cd /var/www/flaskapp
+          git pull origin main
+          pip3 install -r requirements.txt
+          sudo systemctl restart flaskapp
+          sudo systemctl status flaskapp
