@@ -6,22 +6,24 @@ app = Flask(__name__)
 @app.route('/')
 def home():
     return jsonify({
-        'message': 'Hello from Flask on EC2!',
-        'status': 'running'
+        "message": "Hello from Flask on EC2!",
+        "status": "running"
     })
+
 
 @app.route('/health')
 def health():
     return jsonify({'status': 'healthy'}), 200
 
-@app.route('/add/<int:a>/<int:b>')
 
+@app.route('/add/<int:a>/<int:b>')
 def add(a, b):
     return jsonify({
         'a': a,
         'b': b,
         'result': a + b
     })
+
 
 @app.route('/subtract/<int:a>/<int:b>')
 def subtract(a, b):
@@ -31,5 +33,6 @@ def subtract(a, b):
         'result': a - b
     })
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
